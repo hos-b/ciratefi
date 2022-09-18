@@ -1,34 +1,25 @@
-
 #include <cstdint>
 #include <initializer_list>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
-namespace ciratefi
+#include <unsupported/Eigen/CXX11/Tensor>
+
+namespace ciratefi::circle
 {
 
-class CircularSamplingFilter
-{
-public:
-  CircularSamplingFilter (cv::Mat image_mat, double max_circle_distance,
-                          cv::Size quantization,
-                          int inter_flag = cv::INTER_LINEAR);
-  void set_template (cv::Mat template_mat, double max_circle_distance,
-                     cv::Size quantization, int inter_flag);
+cv::Mat calculate_template_features(
+    cv::Mat raw_template, const std::initializer_list<double> &scales,
+    const std::initializer_list<int> &radi,
+    int polar_inter_flag = cv::INTER_LINEAR | cv::WARP_POLAR_LINEAR |
+                           cv::WARP_FILL_OUTLIERS,
+    int resize_inter_flag = cv::INTER_LINEAR);
 
-  template <typename T>
-  std::vector<T>
-  get_filter (std::initializer_list<size_t> radi)
-  {
-  }
+Eigen::Tensor<double, 3>
+compute_image_features(cv::Mat image, const std::initializer_list<int> &radi);
 
-private:
-  cv::Mat calculate_filter (cv::Mat input);
+std::pair<Eigen::Tensor<double, 2>, Eigen::Tensor<long int, 2>>
+compute_circular_correlation(const Eigen::Tensor<double, 3> &image_features,
+                             const Eigen::Tensor<double, 2> &template_features);
 
-  cv::Mat _img, _img_polar;
-  cv::Mat _templ, _templ_polar;
-
-  std::vector<float> _img_filter, templ_filter;
-};
-
-} // namespace ciratefi
+} // namespace ciratefi::circle

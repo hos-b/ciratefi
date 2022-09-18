@@ -7,11 +7,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(OpenCV REQUIRED)
+find_package (Eigen3 3.3 REQUIRED NO_MODULE)
+ 
 
 include_directories(
 	include
     ${OpenCV_INCLUDE_DIRS}
 )
 
-add_executable(${PROJECT_NAME} src/main.cpp)
-target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
+add_executable(${PROJECT_NAME} src/main.cpp
+                               src/filters/circ_sample_filter.cpp
+)
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS} Eigen3::Eigen)
