@@ -8,7 +8,7 @@
 namespace ciratefi::circle
 {
 
-cv::Mat calculate_template_features(
+Eigen::Tensor<double, 2> compute_template_features(
     cv::Mat raw_template, const std::initializer_list<double> &scales,
     const std::initializer_list<int> &radi,
     int polar_inter_flag = cv::INTER_LINEAR | cv::WARP_POLAR_LINEAR |

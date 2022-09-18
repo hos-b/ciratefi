@@ -78,8 +78,8 @@ compute_template_features(cv::Mat raw_template,
     int scale_idx = 0;
     for (auto scale : scales) {
         cv::Mat resized_template;
-        if (scale == 1.0f) {
-            resized_template = raw_template;
+        if (scale == 1) {
+            resized_template = raw_template.clone();
         } else {
             cv::resize(raw_template, resized_template, cv::Size(), scale, scale,
                        resize_inter_flag);
@@ -90,12 +90,12 @@ compute_template_features(cv::Mat raw_template,
             resized_template, resized_polar,
             {resized_template.cols / 2.0f, resized_template.rows / 2.0f},
             resized_template.cols / 2.0f, polar_inter_flag);
-        // reduce polar image along rows
+        // reduce polar image along columns to a single row
         cv::Mat col_features;
         cv::reduce(resized_polar, col_features, 0, cv::REDUCE_AVG, CV_64F);
         for (auto radius : radi) {
             if (radius < resized_polar.cols) {
-                cq(scale_idx, radius) = col_features.at<double>(0, radius);
+                cq(scale_idx, radius) = col_features.at<double>(radius);
             } else {
                 cq(scale_idx, radius) = 0.0;
             }
@@ -158,16 +158,18 @@ compute_circular_correlation(const Eigen::Tensor<double, 3> &image_features,
             (template_features.chip(s, 0) - tmp_radius_mean(s));
     }
     const Eigen::Tensor<double, 1> template_std =
-        img_std_interm.square().sum(Eigen::array<int, 1>({0})).sqrt();
+        tmp_std_interm.square().sum(Eigen::array<int, 1>({0})).sqrt();
     // [S, H, W]
-    Eigen::Tensor<double, 3> cross_corr;
+    Eigen::Tensor<double, 3> cross_corr(scale_count, image_h, image_w);
     for (int s = 0; s < scale_count; ++s) {
         for (int i = 0; i < image_h; ++i) {
             for (int j = 0; j < image_w; ++j) {
+                const Eigen::array<Eigen::Index, 3> offsets = {0, i, j};
+                const Eigen::array<Eigen::Index, 3> extents = {radius_count, 1,
+                                                               1};
+                const Eigen::array<Eigen::Index, 1> new_shape = {radius_count};
                 Eigen::Tensor<double, 0> numerator =
-                    (img_std_interm.slice(
-                         Eigen::array<Eigen::Index, 3>({0, i, j}),
-                         Eigen::array<Eigen::Index, 3>({radius_count, 1, 1})) *
+                    (img_std_interm.slice(offsets, extents).reshape(new_shape) *
                      tmp_std_interm.chip(s, 0))
                         .sum();
                 cross_corr(s, i, j) =
