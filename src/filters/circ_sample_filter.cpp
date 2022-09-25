@@ -5,6 +5,9 @@
 
 #include <filters/circ_sample_filter.h>
 
+#include <opencv2/highgui.hpp>
+#include <fmt/format.h>
+
 namespace ciratefi::circle
 {
 
@@ -98,7 +101,6 @@ at::Tensor compute_template_features(cv::Mat raw_template,
                     : 0.0;
         }
     }
-    std::cout << "template samples:\n" << cq << "\n";
     return cq;
 }
 
@@ -114,6 +116,12 @@ at::Tensor compute_image_features(cv::Mat image, const std::vector<int> &radii)
                 accessor[r][i][j] = sample_circle(image, j, i, radii[r]);
             }
         }
+        // cv::Mat t1 =
+        //     cv::Mat(image.rows, image.cols, CV_64FC1, accessor[r].data())
+        //         .clone();
+        // t1.convertTo(t1, CV_8UC1, 255.0);
+        // cv::imshow("circ", t1);
+        // cv::waitKey(0);
     }
     return circ_features;
 }
@@ -134,50 +142,33 @@ compute_circular_correlation(const at::Tensor &image_features,
     const int radius_count = image_features.size(0);
     const int image_h = image_features.size(1);
     const int image_w = image_features.size(2);
-    // cross correlation between the image and the template [H, W]
-    at::Tensor correlation = at::empty({image_h, image_w}, at::kDouble);
-    // argmax for determining the scale [H, W]
-    at::Tensor corr_argmax = at::empty({image_h, image_w}, at::kInt);
-    // calculate image mean & std across different radii [H, W]
-    const at::Tensor img_radius_mean = image_features.mean({0});
 
+    // image radius mean [H, W]
+    const at::Tensor img_radius_mean = image_features.mean({0});
     // intermediate results: image_features - mean [R, H, W]
-    at::Tensor img_std_interm =
-        at::empty({radius_count, image_h, image_w}, at::kDouble);
-    for (int r = 0; r < radius_count; r += 1) {
-        img_std_interm.index_put_(
-            {r, "..."}, (image_features.index({r, "..."}) - img_radius_mean));
-    }
+    at::Tensor img_std_interm = image_features - img_radius_mean;
+    // std across radii: [H, W]
     const at::Tensor image_std = img_std_interm.square().sum({0}).sqrt();
 
-    // calculate template std across different radii
+    // template radius mean [S]
     at::Tensor tmp_radius_mean = template_features.mean({1});
+    // intermediate results: template_features - mean [S, R]
     at::Tensor tmp_std_interm =
-        at::empty({scale_count, radius_count}, at::kDouble);
-    for (int s = 0; s < scale_count; s += 1) {
-        tmp_std_interm.index_put_(
-            {s, "..."},
-            (template_features.index({s, "..."}) - tmp_radius_mean.index({s})));
-    }
-    const at::Tensor template_std = tmp_std_interm.square().sum({0}).sqrt();
-    // [S, H, W]
+        template_features -
+        tmp_radius_mean.reshape({scale_count, 1}).repeat({1, radius_count});
+    // template std across different radii [S]
+    const at::Tensor template_std = tmp_std_interm.square().sum({1}).sqrt();
+    // cross correlation per scale [S, H, W]
     at::Tensor cross_corr =
-        at::empty({scale_count, image_h, image_w}, at::kDouble);
+        (tmp_std_interm.reshape({scale_count, radius_count, 1, 1})
+             .repeat({1, 1, image_h, image_w}) *
+         img_std_interm)
+            .sum({1})
+            .squeeze() /
+        (template_std.reshape({scale_count, 1, 1})
+             .repeat({1, image_h, image_w}) *
+         image_std.reshape({1, image_h, image_w}).repeat({scale_count, 1, 1}));
 
-#pragma omp parallel for collapse(3)
-    for (int s = 0; s < scale_count; ++s) {
-        for (int i = 0; i < image_h; ++i) {
-            for (int j = 0; j < image_w; ++j) {
-                at::Scalar numerator = (img_std_interm.index({"...", i, j}) *
-                                        tmp_std_interm.index({s, "..."}))
-                                           .sum()
-                                           .item();
-                cross_corr.index_put_({s, i, j},
-                                      numerator / (image_std.index({i, j}) *
-                                                   template_std.index({s})));
-            }
-        }
-    }
     return cross_corr.max(0);
 }
 
