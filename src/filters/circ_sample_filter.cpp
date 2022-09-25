@@ -23,9 +23,9 @@ static double sample_circle(cv::Mat image, int xc, int yc, int r)
     size_t count = 0;
     auto sample = [&image, &sum, &count, w = image.cols,
                    h = image.rows](int x, int y) {
+        count += 1;
         if (x >= 0 && x < w && y >= 0 && y < h)
             sum += static_cast<double>(image.at<double>(y, x));
-        count += 1;
     };
     // make sure there is no realloc
     int x = 0;
@@ -90,13 +90,14 @@ at::Tensor compute_template_features(cv::Mat raw_template,
         // after this radius, circle falls completely outside the image
         int max_radius = std::sqrt(xc * xc + yc * yc);
         for (size_t r = 0; r < radii.size(); ++r) {
-            // circles
+            // circle sampling
             accessor[s][r] =
                 radii[r] <= max_radius
                     ? sample_circle(resized_template, xc, yc, radii[r])
                     : 0.0;
         }
     }
+    std::cout << "template samples:\n" << cq << "\n";
     return cq;
 }
 
@@ -164,12 +165,6 @@ compute_circular_correlation(const at::Tensor &image_features,
     for (int s = 0; s < scale_count; ++s) {
         for (int i = 0; i < image_h; ++i) {
             for (int j = 0; j < image_w; ++j) {
-                // const Eigen::array<Eigen::Index, 3> offsets = {0, i, j};
-                // const Eigen::array<Eigen::Index, 3> extents = {radius_count,
-                // 1,
-                //                                                1};
-                // const Eigen::array<Eigen::Index, 1> new_shape =
-                // {radius_count};
                 at::Scalar numerator = (img_std_interm.index({"...", i, j}) *
                                         tmp_std_interm.index({s, "..."}))
                                            .sum()

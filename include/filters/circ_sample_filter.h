@@ -4,6 +4,8 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
+#define debug_trap __asm__ volatile("int3")
+
 namespace ciratefi::circle
 {
 
