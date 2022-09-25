@@ -89,6 +89,7 @@ at::Tensor compute_template_features(cv::Mat raw_template,
         int yc = resized_template.rows / 2;
         // after this radius, circle falls completely outside the image
         int max_radius = std::sqrt(xc * xc + yc * yc);
+#pragma omp parallel for
         for (size_t r = 0; r < radii.size(); ++r) {
             // circle sampling
             accessor[s][r] =
@@ -106,6 +107,7 @@ at::Tensor compute_image_features(cv::Mat image, const std::vector<int> &radii)
     at::Tensor circ_features = at::empty(
         {static_cast<long>(radii.size()), image.rows, image.cols}, at::kDouble);
     auto accessor = circ_features.accessor<double, 3>();
+#pragma omp parallel for collapse(3)
     for (size_t r = 0; r < radii.size(); ++r) {
         for (int i = 0; i < image.rows; ++i) {
             for (int j = 0; j < image.cols; ++j) {
@@ -161,7 +163,8 @@ compute_circular_correlation(const at::Tensor &image_features,
     // [S, H, W]
     at::Tensor cross_corr =
         at::empty({scale_count, image_h, image_w}, at::kDouble);
-    auto t = torch::zeros({});
+
+#pragma omp parallel for collapse(3)
     for (int s = 0; s < scale_count; ++s) {
         for (int i = 0; i < image_h; ++i) {
             for (int j = 0; j < image_w; ++j) {

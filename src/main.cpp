@@ -17,7 +17,7 @@ int main(int argc, char ** argv)
         cv::imread("/home/hosein/template.png", cv::IMREAD_GRAYSCALE);
     cv::Mat image_org = image.clone();
 
-    auto circ_radii = {2, 4, 10, 12, 20, 30, 40};
+    auto circ_radii = {2, 4, 10, 12, 14, 16, 18, 20, 22, 24, 26};
     auto scales = {0.6, 0.8, 1.0, 1.2, 1.3, 1.4};
 
     image.convertTo(image, CV_64FC1, 1.0 / 255);
@@ -38,7 +38,7 @@ int main(int argc, char ** argv)
     for (int i = 0; i < viz.rows; ++i) {
         for (int j = 0; j < viz.cols; ++j) {
             double corr_num = correlation.at<double>(i, j);
-            if (scale.index({i, j}).item().to<int32_t>() != chosen_scale || corr_num < 0.7)
+            if (scale.index({i, j}).item().to<int32_t>() != chosen_scale || corr_num < 0.2)
                 continue;
             viz.at<cv::Vec3b>(i, j) = cv::Vec3b(0, 0, 255);
         }
