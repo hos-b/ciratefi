@@ -23,7 +23,7 @@ static double sample_circle(cv::Mat image, int xc, int yc, int r)
     auto sample = [&image, &sum, &count, w = image.cols,
                    h = image.rows](int x, int y) {
         if (x >= 0 && x < w && y >= 0 && y < h)
-            sum += static_cast<double>(image.at<double>(y, x));
+            sum += image.at<double>(y, x);
         count += 1;
     };
     // make sure there is no realloc
@@ -70,49 +70,38 @@ static double sample_circle(cv::Mat image, int xc, int yc, int r)
  */
 Eigen::Tensor<double, 2>
 compute_template_features(cv::Mat raw_template,
-                          const std::initializer_list<double> &scales,
-                          const std::initializer_list<int> &radi,
-                          int polar_inter_flag, int resize_inter_flag)
+                          const std::vector<double> &scales,
+                          const std::vector<int> &radi, int resize_inter_flag)
 {
     Eigen::Tensor<double, 2> cq(scales.size(), radi.size());
-    int scale_idx = 0;
-    for (auto scale : scales) {
+    for (size_t s = 0; s < scales.size(); ++s) {
         cv::Mat resized_template;
-        if (scale == 1) {
-            resized_template = raw_template.clone();
+        if (scales[s] == 1) {
+            resized_template = raw_template;
         } else {
-            cv::resize(raw_template, resized_template, cv::Size(), scale, scale,
-                       resize_inter_flag);
+            cv::resize(raw_template, resized_template, cv::Size(), scales[s],
+                       scales[s], resize_inter_flag);
         }
-        // map to polar coordinates to make circle projection easier
-        cv::Mat resized_polar;
-        cv::linearPolar(
-            resized_template, resized_polar,
-            {resized_template.cols / 2.0f, resized_template.rows / 2.0f},
-            resized_template.cols / 2.0f, polar_inter_flag);
-        // reduce polar image along columns to a single row
-        cv::Mat col_features;
-        cv::reduce(resized_polar, col_features, 0, cv::REDUCE_AVG, CV_64F);
-        for (auto radius : radi) {
-            if (radius < resized_polar.cols) {
-                cq(scale_idx, radius) = col_features.at<double>(radius);
-            } else {
-                cq(scale_idx, radius) = 0.0;
-            }
+        int xc = resized_template.cols / 2;
+        int yc = resized_template.rows / 2;
+        int max_radius = std::sqrt(xc * xc + yc * yc);
+        for (size_t r = 0; r < radi.size(); ++r) {
+            cq(s, r) = radi[r] <= max_radius
+                           ? sample_circle(resized_template, xc, yc, radi[r])
+                           : 0;
         }
-        scale_idx += 1;
     }
     return cq;
 }
 
-Eigen::Tensor<double, 3>
-compute_image_features(cv::Mat image, const std::initializer_list<int> &radi)
+Eigen::Tensor<double, 3> compute_image_features(cv::Mat image,
+                                                const std::vector<int> &radi)
 {
     Eigen::Tensor<double, 3> circ_features(radi.size(), image.rows, image.cols);
-    for (auto r : radi) {
+    for (size_t r = 0; r < radi.size(); ++r) {
         for (int i = 0; i < image.rows; ++i) {
             for (int j = 0; j < image.cols; ++j) {
-                circ_features(r, i, j) = sample_circle(image, j, i, r);
+                circ_features(r, i, j) = sample_circle(image, j, i, radi[r]);
             }
         }
     }
