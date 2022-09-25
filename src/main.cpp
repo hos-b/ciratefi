@@ -5,7 +5,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
-int main(int argc, char ** argv)
+int main(int argc, char **argv)
 {
     Eigen::Tensor<double, 3> tensor(3, 5, 5);
     // clang-format: off
@@ -36,6 +36,10 @@ int main(int argc, char ** argv)
     cv::Mat image = cv::imread("/home/hosein/image.png", cv::IMREAD_GRAYSCALE);
     cv::Mat templ =
         cv::imread("/home/hosein/template.png", cv::IMREAD_GRAYSCALE);
+    cv::Mat image_org = image.clone();
+
+    image.convertTo(image, CV_64FC1, 1.0 / 255);
+    templ.convertTo(templ, CV_64FC1, 1.0 / 255);
 
     auto circ_radii = {2, 4, 10, 12, 20, 30, 40};
     auto scales = {0.6, 0.8, 1.0, 1.2, 1.3, 1.4};
@@ -51,7 +55,7 @@ int main(int argc, char ** argv)
     cv::threshold(correlation, correlation, 0.0, 1.0, cv::THRESH_TOZERO);
 
     cv::Mat viz;
-    cv::cvtColor(image, viz, cv::COLOR_GRAY2BGR);
+    cv::cvtColor(image_org, viz, cv::COLOR_GRAY2BGR);
     for (int i = 0; i < viz.rows; ++i) {
         for (int j = 0; j < viz.cols; ++j) {
             double corr_num = correlation.at<double>(i, j);
