@@ -1,9 +1,10 @@
 #include <cstdlib>
-#include <filters/circ_sample_filter.h>
 #include <iostream>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
+
+#include <filters/circ_sample_filter.h>
 
 int main(int argc, char **argv)
 {
@@ -17,6 +18,9 @@ int main(int argc, char **argv)
 
     auto circ_radii = {2, 4, 10, 12, 14, 16, 18, 20, 22, 24, 26};
     auto scales = {0.6, 0.8, 1.0, 1.2, 1.3, 1.4};
+    std::vector<double> angles;
+    for (int i = 0; i < 36; ++i)
+        angles.emplace_back(i * 10);
 
     image.convertTo(image, CV_64FC1, 1.0 / 255);
     templ.convertTo(templ, CV_64FC1, 1.0 / 255);
@@ -25,8 +29,7 @@ int main(int argc, char **argv)
     auto tmp_f =
         ciratefi::circle::compute_template_features(templ, scales, circ_radii);
 
-    auto [corr, argmax] =
-        ciratefi::circle::compute_circular_correlation(img_f, tmp_f);
+    auto [corr, argmax] = ciratefi::circle::compute_correlation(img_f, tmp_f);
 
     cv::Mat correlation(image.rows, image.cols, CV_64FC1, corr.data_ptr());
     cv::threshold(correlation, correlation, 0.0, 1.0, cv::THRESH_TOZERO);
