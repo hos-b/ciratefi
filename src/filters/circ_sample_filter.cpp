@@ -23,7 +23,7 @@ namespace ciratefi::circle
 static double sample_circle(cv::Mat image, int xc, int yc, int r)
 {
     double sum = 0.0f;
-    size_t count = 0;
+    int count = 0;
     auto sample = [&image, &sum, &count, w = image.cols,
                    h = image.rows](int x, int y) {
         count += 1;
@@ -76,28 +76,46 @@ at::Tensor compute_template_features(cv::Mat raw_template,
                                      const std::vector<int> &radii,
                                      int resize_inter_flag)
 {
-    at::Tensor cq = at::empty(
-        {static_cast<long>(scales.size()), static_cast<long>(radii.size())},
-        at::kDouble);
-    auto accessor = cq.accessor<double, 2>();
+    struct rad_info
+    {
+        int xc;
+        int yc;
+        int max_radius;
+    };
+    // prepare data for parallel processing
+    std::vector<cv::Mat> scaled_templates;
+    std::vector<rad_info> scaled_info;
+    scaled_templates.reserve(scales.size());
+    scaled_info.reserve(scales.size());
     for (size_t s = 0; s < scales.size(); ++s) {
         cv::Mat resized_template;
         if (scales[s] == 1) {
-            resized_template = raw_template.clone();
+            resized_template = raw_template;
         } else {
             cv::resize(raw_template, resized_template, cv::Size(), scales[s],
                        scales[s], resize_inter_flag);
         }
+        scaled_templates.emplace_back(resized_template);
         int xc = resized_template.cols / 2;
         int yc = resized_template.rows / 2;
         // after this radius, circle falls completely outside the image
         int max_radius = std::sqrt(xc * xc + yc * yc);
-#pragma omp parallel for
+        scaled_info.emplace_back(xc, yc, max_radius);
+    }
+    // prepare tensor & its accessor
+    at::Tensor cq = at::empty(
+        {static_cast<long>(scales.size()), static_cast<long>(radii.size())},
+        at::kDouble);
+    auto accessor = cq.accessor<double, 2>();
+
+#pragma omp parallel for collapse(2)
+    for (size_t s = 0; s < scales.size(); ++s) {
         for (size_t r = 0; r < radii.size(); ++r) {
             // circle sampling
             accessor[s][r] =
-                radii[r] <= max_radius
-                    ? sample_circle(resized_template, xc, yc, radii[r])
+                radii[r] <= scaled_info[s].max_radius
+                    ? sample_circle(scaled_templates[s], scaled_info[s].xc,
+                                    scaled_info[s].yc, radii[r])
                     : 0.0;
         }
     }
