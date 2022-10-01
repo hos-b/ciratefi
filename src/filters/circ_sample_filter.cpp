@@ -5,8 +5,8 @@
 
 #include <filters/circ_sample_filter.h>
 
-#include <opencv2/highgui.hpp>
 #include <fmt/format.h>
+#include <opencv2/highgui.hpp>
 
 namespace ciratefi::circle
 {
@@ -134,8 +134,8 @@ at::Tensor compute_image_features(cv::Mat image, const std::vector<int> &radii)
  * @return max cross-corelation and the arg-max for scale detection
  */
 std::tuple<at::Tensor, at::Tensor>
-compute_circular_correlation(const at::Tensor &image_features,
-                             const at::Tensor &template_features)
+compute_correlation(const at::Tensor &image_features,
+                    const at::Tensor &template_features)
 {
     using namespace at::indexing;
     const int scale_count = template_features.size(0);
