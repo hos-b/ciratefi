@@ -3,7 +3,7 @@
 #include <opencv2/imgproc.hpp>
 #include <torch/torch.h>
 
-#include <filters/circ_sample_filter.h>
+#include <filters/radi_sample_filter.h>
 
 #include <fmt/format.h>
 #include <opencv2/highgui.hpp>
@@ -100,7 +100,7 @@ at::Tensor compute_template_features(cv::Mat raw_template,
         int yc = resized_template.rows / 2;
         // after this radius, circle falls completely outside the image
         int max_radius = std::sqrt(xc * xc + yc * yc);
-        scaled_info.emplace_back(xc, yc, max_radius);
+        scaled_info.emplace_back(rad_info{xc, yc, max_radius});
     }
     // prepare tensor & its accessor
     at::Tensor cq = at::empty(
