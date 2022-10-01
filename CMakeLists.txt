@@ -21,6 +21,7 @@ include_directories(
 
 add_executable(${PROJECT_NAME} src/main.cpp
                                src/filters/circ_sample_filter.cpp
+                               src/filters/radi_sample_filter.cpp
 )
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS}
                                       ${TORCH_LIBRARIES}

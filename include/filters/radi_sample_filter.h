@@ -1,23 +1,26 @@
+#ifndef __RAFI_H__
+#define __RAFI_H__
+
 #include <ATen/ATen.h>
 #include <cstdint>
 #include <initializer_list>
 #include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
 
 #include "debug_trap.h"
 
-namespace ciratefi::circle
+namespace ciratefi::radial
 {
 
-at::Tensor compute_template_features(cv::Mat raw_template,
-                                     const std::vector<double> &scales,
-                                     const std::vector<int> &radi,
-                                     int resize_inter_flag = cv::INTER_LINEAR);
+at::Tensor compute_template_features(cv::Mat raw_template, const int lambda,
+                                     const std::vector<double> &angles);
 
-at::Tensor compute_image_features(cv::Mat image, const std::vector<int> &radi);
+at::Tensor compute_image_features(cv::Mat image, const int lambda,
+                                  const std::vector<double> &angles);
 
 std::tuple<at::Tensor, at::Tensor>
-compute_correlation(const at::Tensor &image_features,
-                    const at::Tensor &template_features);
+compute_circular_correlation(const at::Tensor &image_features,
+                             const at::Tensor &template_features);
 
 } // namespace ciratefi::circle
+
+#endif

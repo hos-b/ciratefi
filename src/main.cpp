@@ -5,6 +5,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include <filters/circ_sample_filter.h>
+#include <filters/radi_sample_filter.h>
 
 int main(int argc, char **argv)
 {
@@ -19,11 +20,14 @@ int main(int argc, char **argv)
     auto circ_radii = {2, 4, 10, 12, 14, 16, 18, 20, 22, 24, 26};
     auto scales = {0.6, 0.8, 1.0, 1.2, 1.3, 1.4};
     std::vector<double> angles;
-    for (int i = 0; i < 36; ++i)
-        angles.emplace_back(i * 10);
+    for (int i = 0; i < 365; i += 10)
+        angles.emplace_back(i);
+
 
     image.convertTo(image, CV_64FC1, 1.0 / 255);
     templ.convertTo(templ, CV_64FC1, 1.0 / 255);
+
+    auto test_f = ciratefi::radial::compute_template_features(templ, 20, angles);
 
     auto img_f = ciratefi::circle::compute_image_features(image, circ_radii);
     auto tmp_f =
