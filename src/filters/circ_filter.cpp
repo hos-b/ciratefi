@@ -1,8 +1,6 @@
 #include <opencv2/core.hpp>
-#include <opencv2/core/hal/interface.h>
 #include <opencv2/imgproc.hpp>
 
-#include <fmt/format.h>
 #include <torch/torch.h>
 
 namespace ciratefi::circle
