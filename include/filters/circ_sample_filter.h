@@ -10,12 +10,13 @@
 
 namespace ciratefi::circle
 {
-at::Tensor compute_template_features(cv::Mat raw_template,
+at::Tensor compute_template_features(const cv::Mat raw_template,
                                      const std::vector<double> &scales,
                                      const std::vector<int> &radii,
                                      int resize_inter_flag = cv::INTER_LINEAR);
 
-at::Tensor compute_image_features(cv::Mat image, const std::vector<int> &radii);
+at::Tensor compute_image_features(const cv::Mat image,
+                                  const std::vector<int> &radii);
 
 std::tuple<at::Tensor, at::Tensor>
 compute_correlation(const at::Tensor &image_features,

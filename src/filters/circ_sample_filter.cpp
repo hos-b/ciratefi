@@ -1,12 +1,11 @@
 #include <opencv2/core.hpp>
 #include <opencv2/core/hal/interface.h>
 #include <opencv2/imgproc.hpp>
+
+#include <fmt/format.h>
 #include <torch/torch.h>
 
 #include <filters/radi_sample_filter.h>
-
-#include <fmt/format.h>
-#include <opencv2/highgui.hpp>
 
 namespace ciratefi::circle
 {
@@ -15,8 +14,8 @@ namespace ciratefi::circle
  * @brief uses Bresenham’s circle drawing algorithm, to sample a circle in an
           image
  * @param image 8-bit grayscale image
- * @param xc center x
- * @param yc center y
+ * @param xc circle center x
+ * @param yc circle center y
  * @param r radius
  * @return std::vector<cv::Point2i>
  */
@@ -66,13 +65,13 @@ static double sample_circle(cv::Mat image, int xc, int yc, int r)
 /**
  * @brief calcualte multi-scale rotation invariant features for template
  *
- * @param raw_template tempalte image
- * @param scales scales
- * @param radi radii
+ * @param raw_template tempalte image [H', W']
+ * @param scales scales [S]
+ * @param radi radii [R]
  * @param resize_inter_flag interpolation flag for resizing
- * @return cv::Mat feature matrix
+ * @return at::Tensor template feature matrix [S, R]
  */
-at::Tensor compute_template_features(cv::Mat raw_template,
+at::Tensor compute_template_features(const cv::Mat raw_template,
                                      const std::vector<double> &scales,
                                      const std::vector<int> &radii,
                                      int resize_inter_flag)
@@ -108,7 +107,6 @@ at::Tensor compute_template_features(cv::Mat raw_template,
         {static_cast<long>(scales.size()), static_cast<long>(radii.size())},
         at::kDouble);
     auto accessor = cq.accessor<double, 2>();
-
 #pragma omp parallel for collapse(2)
     for (size_t s = 0; s < scales.size(); ++s) {
         for (size_t r = 0; r < radii.size(); ++r) {
@@ -123,24 +121,26 @@ at::Tensor compute_template_features(cv::Mat raw_template,
     return cq;
 }
 
-at::Tensor compute_image_features(cv::Mat image, const std::vector<int> &radii)
+/**
+ * @brief calculate circular image features
+ *
+ * @param image input image [H, W]
+ * @param radii radius vector [R]
+ * @return at::Tensor [R, H, W]
+ */
+at::Tensor compute_image_features(const cv::Mat image,
+                                  const std::vector<int> &radii)
 {
     at::Tensor circ_features = at::empty(
         {static_cast<long>(radii.size()), image.rows, image.cols}, at::kDouble);
     auto accessor = circ_features.accessor<double, 3>();
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(2)
     for (size_t r = 0; r < radii.size(); ++r) {
         for (int i = 0; i < image.rows; ++i) {
             for (int j = 0; j < image.cols; ++j) {
                 accessor[r][i][j] = sample_circle(image, j, i, radii[r]);
             }
         }
-        // cv::Mat t1 =
-        //     cv::Mat(image.rows, image.cols, CV_64FC1, accessor[r].data())
-        //         .clone();
-        // t1.convertTo(t1, CV_8UC1, 255.0);
-        // cv::imshow("circ", t1);
-        // cv::waitKey(0);
     }
     return circ_features;
 }
@@ -150,7 +150,7 @@ at::Tensor compute_image_features(cv::Mat image, const std::vector<int> &radii)
  *
  * @param image_features per pixel circular projection features [R, H, W]
  * @param template_features per scale circular projection features [S, R]
- * @return max cross-corelation and the arg-max for scale detection
+ * @return max cross-corelation and the arg-max for scale detection [H, W]
  */
 std::tuple<at::Tensor, at::Tensor>
 compute_correlation(const at::Tensor &image_features,
@@ -174,19 +174,19 @@ compute_correlation(const at::Tensor &image_features,
     // intermediate results: template_features - mean [S, R]
     at::Tensor tmp_std_interm =
         template_features -
-        tmp_radius_mean.reshape({scale_count, 1}).repeat({1, radius_count});
+        tmp_radius_mean.unsqueeze(1).expand({scale_count, radius_count});
     // template std across different radii [S]
     const at::Tensor template_std = tmp_std_interm.square().sum({1}).sqrt();
     // cross correlation per scale [S, H, W]
     at::Tensor cross_corr =
         (tmp_std_interm.reshape({scale_count, radius_count, 1, 1})
-             .repeat({1, 1, image_h, image_w}) *
+             .expand({scale_count, radius_count, image_h, image_w}) *
          img_std_interm)
-            .sum({1})
-            .squeeze() /
+            .sum({1}) /
         (template_std.reshape({scale_count, 1, 1})
-             .repeat({1, image_h, image_w}) *
-         image_std.reshape({1, image_h, image_w}).repeat({scale_count, 1, 1}));
+             .expand({scale_count, image_h, image_w}) *
+         image_std.reshape({1, image_h, image_w})
+             .expand({scale_count, image_h, image_w}));
 
     return cross_corr.max(0);
 }

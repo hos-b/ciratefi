@@ -14,13 +14,14 @@ namespace ciratefi::radial
 at::Tensor compute_template_features(cv::Mat raw_template, const int lambda,
                                      const std::vector<double> &angles);
 
-at::Tensor compute_image_features(cv::Mat image, const int lambda,
-                                  const std::vector<double> &angles);
+at::Tensor compute_image_features(const cv::Mat image,
+                                  const std::vector<double> &angles,
+                                  const int lambda, const at::Tensor &fg_mask);
 
 std::tuple<at::Tensor, at::Tensor>
-compute_circular_correlation(const at::Tensor &image_features,
-                             const at::Tensor &template_features);
+compute_correlation(const at::Tensor &image_features,
+                    const at::Tensor &template_features);
 
-} // namespace ciratefi::circle
+} // namespace ciratefi::radial
 
 #endif
