@@ -4,8 +4,8 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
-#include <filters/circ_sample_filter.h>
-#include <filters/radi_sample_filter.h>
+#include <filters/circ_filter.h>
+#include <filters/radi_filter.h>
 
 int main(int argc, char **argv)
 {
@@ -23,7 +23,7 @@ int main(int argc, char **argv)
     int lambda = *(circ_radii.end() - 1);
     for (int i = 0; i < 360; i += 10)
         angles.emplace_back(i);
-    const double thresh_fg = 0.8;
+    const double thresh_fg = 0.9;
     const double thresh_sg = 0.8;
 
     image.convertTo(image, CV_64FC1, 1.0 / 255);
@@ -52,20 +52,20 @@ int main(int argc, char **argv)
     // visualization
     cv::Mat correlation(image.rows, image.cols, CV_64FC1, rafi_corr.data_ptr());
     cv::threshold(correlation, correlation, 0.0, 1.0, cv::THRESH_TOZERO);
-    auto accessor = rafi_argmax.accessor<int64_t, 2>();
-    for (size_t s = 0; s < angles.size(); ++s) {
-        cv::Mat viz;
-        cv::cvtColor(image_org, viz, cv::COLOR_GRAY2BGR);
-        for (int i = 0; i < viz.rows; ++i) {
-            for (int j = 0; j < viz.cols; ++j) {
-                if (accessor[i][j] != static_cast<int64_t>(s))
-                    continue;
-                double corr_num = correlation.at<double>(i, j);
+
+    cv::Mat viz;
+    cv::cvtColor(image_org, viz, cv::COLOR_GRAY2BGR);
+    for (int i = 0; i < viz.rows; ++i) {
+        for (int j = 0; j < viz.cols; ++j) {
+            // if (accessor[i][j] != static_cast<int64_t>(s))
+            //     continue;
+            double corr_num = correlation.at<double>(i, j);
+            if (corr_num > thresh_sg)
                 viz.at<cv::Vec3b>(i, j) = cv::Vec3b(0, 0, 255 * corr_num);
-            }
         }
-        cv::imshow("win", viz);
-        cv::waitKey(0);
     }
+    cv::imshow("win", viz);
+    cv::waitKey(0);
+
     return 0;
 }

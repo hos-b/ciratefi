@@ -5,8 +5,6 @@
 #include <fmt/format.h>
 #include <torch/torch.h>
 
-#include <filters/radi_sample_filter.h>
-
 namespace ciratefi::circle
 {
 

@@ -1,9 +1,10 @@
 #ifndef __RAFI_H__
 #define __RAFI_H__
 
-#include <ATen/ATen.h>
 #include <cstdint>
 #include <initializer_list>
+
+#include <ATen/ATen.h>
 #include <opencv2/core.hpp>
 
 #include "debug_trap.h"
