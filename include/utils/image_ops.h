@@ -4,6 +4,9 @@
 #include <opencv2/core.hpp>
 #include <opencv2/core/types.hpp>
 
+
+namespace ciratefi::ops
+{
 /**
  * @brief returns the subpixel value in an image
  *
@@ -42,3 +45,5 @@ inline at::Tensor mat_to_tensor(const cv::Mat mat)
     std::memcpy(tensor.data_ptr(), mat.data, mat.total() * mat.elemSize());
     return tensor;
 }
+
+} // namespace ciratefi::ops

@@ -6,6 +6,9 @@
 
 #include <filters/circ_filter.h>
 #include <filters/radi_filter.h>
+#include <filters/tmpl_filter.h>
+
+#include <fmt/format.h>
 
 int main(int argc, char **argv)
 {
@@ -18,13 +21,13 @@ int main(int argc, char **argv)
     cv::Mat image_org = image.clone();
 
     auto circ_radii = {2, 4, 10, 12, 14, 16, 18, 20, 22, 24, 26};
-    auto scales = {0.6, 0.8, 1.0, 1.2, 1.3, 1.4};
+    auto scales = {0.6, 0.8, 1.0, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.2};
     std::vector<double> angles;
     int lambda = *(circ_radii.end() - 1);
     for (int i = 0; i < 360; i += 10)
-        angles.emplace_back(i);
+        angles.emplace_back(i * M_PI / 180.0);
     const double thresh_fg = 0.9;
-    const double thresh_sg = 0.8;
+    const double thresh_sg = 0.9;
 
     image.convertTo(image, CV_64FC1, 1.0 / 255);
     templ.convertTo(templ, CV_64FC1, 1.0 / 255);
@@ -57,8 +60,6 @@ int main(int argc, char **argv)
     cv::cvtColor(image_org, viz, cv::COLOR_GRAY2BGR);
     for (int i = 0; i < viz.rows; ++i) {
         for (int j = 0; j < viz.cols; ++j) {
-            // if (accessor[i][j] != static_cast<int64_t>(s))
-            //     continue;
             double corr_num = correlation.at<double>(i, j);
             if (corr_num > thresh_sg)
                 viz.at<cv::Vec3b>(i, j) = cv::Vec3b(0, 0, 255 * corr_num);
@@ -66,6 +67,12 @@ int main(int argc, char **argv)
     }
     cv::imshow("win", viz);
     cv::waitKey(0);
+
+    auto results = ciratefi::templ::match(image, templ, scales, angles,
+                                          cifi_argmax, rafi_argmax, sg_mask);
+    
+    for (auto res : results)
+        std::cout << res << std::endl;
 
     return 0;
 }
