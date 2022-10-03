@@ -3,7 +3,7 @@ project(ciratefi)
 
 list(APPEND CMAKE_PREFIX_PATH $ENV{HOME}/lib/libtorch/share/cmake)
 
-set(CMAKE_CXX_FLAGS "-O0 -g -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -15,7 +15,7 @@ find_package(Torch REQUIRED)
 find_package(fmt REQUIRED)
 
 include_directories(
-	include
+    include
     ${OpenCV_INCLUDE_DIRS}
 )
 

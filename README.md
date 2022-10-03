@@ -15,6 +15,15 @@ Original paper: https://link.springer.com/content/pdf/10.1007/978-3-540-77129-6_
 ### 2nd Grade Pixels
 ![second grade pixels](docs/sg.png "2nd Grade Pixels")
 
+## Requirements
+- OpenCV
+- OpenMP
+- Torch (because `at` is the best C++ tensor library)
+- fmt (not really)
+
+# Features
+it's fast.
+
 ## TODO
 - double check implementation of normalized cross correlation in template matcher
-- implement masks
+- implement masking
